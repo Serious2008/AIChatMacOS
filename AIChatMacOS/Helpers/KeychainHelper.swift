@@ -21,16 +21,20 @@ final class KeychainHelper {
         let data = Data(key.utf8)
         let query: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
-            kSecAttrService: service,
-            kSecAttrAccount: account
+            kSecAttrService: "MacChatLLM",
+            kSecAttrAccount: "openai_api_key"
         ]
-        // Delete old
-        SecItemDelete(query as CFDictionary)
-        // Add new
-        var addQuery = query
-        addQuery[kSecValueData] = data
-        addQuery[kSecAttrAccessible] = kSecAttrAccessibleAfterFirstUnlock
-        SecItemAdd(addQuery as CFDictionary, nil)
+        let attrsToUpdate: [CFString: Any] = [
+            kSecValueData: data
+            // kSecAttrAccessible трогать не нужно при апдейте
+        ]
+        let status = SecItemUpdate(query as CFDictionary, attrsToUpdate as CFDictionary)
+        if status == errSecItemNotFound {
+            var addQuery = query
+            addQuery[kSecValueData] = data
+            addQuery[kSecAttrAccessible] = kSecAttrAccessibleAfterFirstUnlock
+            SecItemAdd(addQuery as CFDictionary, nil)
+        }
     }
 
     func getAPIKey() -> String? {

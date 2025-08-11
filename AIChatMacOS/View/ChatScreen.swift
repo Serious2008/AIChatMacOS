@@ -11,6 +11,7 @@ struct ChatScreen: View {
     @StateObject private var vm = ChatViewModel()
     @FocusState private var focused: Bool
     @State private var showingSettings = false
+    @State private var inputHeight: CGFloat = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -43,14 +44,19 @@ struct ChatScreen: View {
             Divider()
 
             HStack(alignment: .bottom, spacing: 8) {
-                TextEditor(text: $vm.input)
-                    .font(.body)
-                    .frame(minHeight: 40, maxHeight: 120)
-                    .scrollContentBackground(.hidden)
-                    .background(Color(NSColor.textBackgroundColor))
-                    .cornerRadius(10)
-                    .focused($focused)
-                    .onSubmit(vm.send)
+                ZStack(alignment: .topLeading) {
+                    GrowingTextView(text: $vm.input, calculatedHeight: $inputHeight, maxHeight: 140)
+                        .frame(height: max(28, inputHeight))
+                        .background(Color.clear)
+                        .cornerRadius(10)
+                        .focused($focused)
+                    if vm.input.isEmpty {
+                        Text("Напишите сообщение…")
+                            .foregroundStyle(.secondary)
+                            .padding(.leading, 8)
+                            .padding(.top, 8)
+                    }
+                }
                 Button(action: vm.send) {
                     if vm.isSending { ProgressView().controlSize(.small) } else { Text("Send") }
                 }
@@ -70,6 +76,6 @@ struct ChatScreen: View {
     }
 }
 
-//#Preview {
-//    ChatScreen()
-//}
+#Preview {
+    ChatScreen()
+}
