@@ -30,13 +30,52 @@ final class ChatViewModel: ObservableObject {
         messages.append(userMessage)
         input = ""
         isSending = true
+        
+        let cfg = UniversalSchemaConfig(
+            version: "1.0",
+            schemaJSON: schemaString,
+            shortReminder: "Ответ строго по схеме v1.0, один валидный JSON, без Markdown."
+        )
+
+        let builder = SystemPromptBuilder(config: cfg)
+
+        // 1) Подготовка сообщений
+        let messages = builder.buildMessages(
+            userInput: trimmed,
+            chatHistory: [] // сюда можно прокинуть историю чата при необходимости
+        )
+        
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
 
         Task {
             do {
-                let reply = try await service.send(messages: messages)
-                messages.append(.init(role: .assistant, content: reply))
+                let result: LLMResponse = try await service.send(
+                    messages: messages,
+                    decodeTo: LLMResponse.self,
+                    jsonDecoder: decoder,
+                    autoRepair: true // один ретрай на случай невалидного JSON
+                )
+                
+                var resultMessage = result.answer.text ?? ""
+                
+                if result.status == .needsClarification {
+                    resultMessage += "\(result.clarificationsNeeded.first ?? "")"
+                }
+                
+                if !result.followUpQuestions.isEmpty {
+                    result.followUpQuestions.forEach({
+                        resultMessage += "\n\($0)"
+                    })
+                }
+                
+                
+                self.messages.append(.init(role: .assistant, content: resultMessage))
+                // обрабатываешь result.status / result.answer / result.meta и т.д.
+//                print(result.status)
             } catch {
                 errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+                print("OpenAI error: \(error)")
             }
             isSending = false
         }
