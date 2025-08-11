@@ -22,27 +22,47 @@ struct GrowingTextView: NSViewRepresentable {
         scroll.hasHorizontalScroller = false
         scroll.borderType = .noBorder
         scroll.appearance = NSApp.effectiveAppearance
+        scroll.contentView.drawsBackground = false
+        scroll.wantsLayer = true
+        scroll.layer?.backgroundColor = NSColor.clear.cgColor
 
         let textView = NSTextView()
         textView.isRichText = false
         textView.isEditable = true
         textView.isSelectable = true
         textView.drawsBackground = true
+        textView.wantsLayer = true
         textView.font = font
         textView.textContainerInset = NSSize(width: 4, height: 6)
         textView.textContainer?.widthTracksTextView = true
         textView.textContainer?.lineFragmentPadding = 4
+        textView.textContainer?.lineBreakMode = .byWordWrapping
+        textView.minSize = NSSize(width: 0, height: 0)
+        textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        textView.isHorizontallyResizable = false
+        textView.isVerticallyResizable = true
+        textView.autoresizingMask = [.width]
         textView.delegate = context.coordinator
 
         // --- Appearance & colors (dark/light safe) ---
-        let isDark = (scroll.appearance?.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua)
         textView.appearance = scroll.appearance
-        textView.backgroundColor = isDark ? NSColor.controlBackgroundColor : NSColor.textBackgroundColor
-        textView.textColor = isDark ? NSColor.white : NSColor.textColor
-        textView.insertionPointColor = isDark ? NSColor.white : NSColor.textColor
-        textView.typingAttributes[.foregroundColor] = isDark ? NSColor.white : NSColor.textColor
+        let resolvedBg = NSColor.textBackgroundColor
+        let resolvedFg = NSColor.textColor
+        textView.usesAdaptiveColorMappingForDarkAppearance = false
+        textView.backgroundColor = resolvedBg
+        textView.layer?.backgroundColor = resolvedBg.cgColor
+        textView.textColor = resolvedFg
+        textView.insertionPointColor = resolvedFg
+        textView.typingAttributes = [
+            .foregroundColor: resolvedFg,
+            .font: font
+        ]
         textView.selectedTextAttributes = [.backgroundColor: NSColor.selectedTextBackgroundColor]
 
+        // Ensure initial sizing so the container has a real width
+        let initialWidth = scroll.contentSize.width > 0 ? scroll.contentSize.width : 100
+        textView.textContainer?.containerSize = NSSize(width: initialWidth, height: .greatestFiniteMagnitude)
+        textView.setFrameSize(NSSize(width: initialWidth, height: 1))
         scroll.documentView = textView
         context.coordinator.textView = textView
         textView.string = text
@@ -52,28 +72,49 @@ struct GrowingTextView: NSViewRepresentable {
 
     func updateNSView(_ nsView: NSScrollView, context: Context) {
         guard let textView = context.coordinator.textView else { return }
-        nsView.appearance = NSApp.effectiveAppearance
-        let isDark = (nsView.appearance?.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua)
+        nsView.appearance = nsView.effectiveAppearance
+        nsView.contentView.drawsBackground = false
+        // Keep document sizing in sync so glyphs actually layout
+        nsView.layoutSubtreeIfNeeded()
+        if let docView = nsView.documentView as? NSTextView {
+            docView.textContainer?.containerSize = NSSize(width: nsView.contentSize.width, height: .greatestFiniteMagnitude)
+            var size = docView.frame.size
+            size.width = nsView.contentSize.width
+            docView.setFrameSize(size)
+        }
 
         if textView.string != text {
+            // Preserve selection while updating string
+            let selectedRange = textView.selectedRange()
             textView.string = text
+            textView.setSelectedRange(selectedRange.location <= text.count ? selectedRange : NSRange(location: text.count, length: 0))
         }
 
         textView.font = font
         textView.appearance = nsView.appearance
         textView.drawsBackground = true
-        textView.backgroundColor = isDark ? NSColor.controlBackgroundColor : NSColor.textBackgroundColor
-        textView.textColor = isDark ? NSColor.white : NSColor.textColor
-        textView.insertionPointColor = isDark ? NSColor.white : NSColor.textColor
-        textView.typingAttributes[.foregroundColor] = isDark ? NSColor.white : NSColor.textColor
+        let resolvedBg = NSColor.textBackgroundColor
+        let resolvedFg = NSColor.textColor
+        textView.usesAdaptiveColorMappingForDarkAppearance = false
+        textView.backgroundColor = resolvedBg
+        textView.layer?.backgroundColor = resolvedBg.cgColor
+        textView.textColor = resolvedFg
+        textView.insertionPointColor = resolvedFg
+        textView.typingAttributes = [
+            .foregroundColor: resolvedFg,
+            .font: font
+        ]
         textView.selectedTextAttributes = [.backgroundColor: NSColor.selectedTextBackgroundColor]
 
-        // Recolor existing content to ensure visibility in dark mode
+        // Recolor existing content to ensure visibility
         let len = (textView.string as NSString).length
-        if len > 0 {
-            textView.textStorage?.addAttribute(.foregroundColor,
-                                               value: (isDark ? NSColor.white : NSColor.textColor),
-                                               range: NSRange(location: 0, length: len))
+        if len > 0, let storage = textView.textStorage {
+            storage.beginEditing()
+            storage.setAttributes([
+                .foregroundColor: resolvedFg,
+                .font: font
+            ], range: NSRange(location: 0, length: len))
+            storage.endEditing()
         }
 
         recalcHeight(textView)

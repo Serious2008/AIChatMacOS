@@ -47,14 +47,17 @@ struct ChatScreen: View {
                 ZStack(alignment: .topLeading) {
                     GrowingTextView(text: $vm.input, calculatedHeight: $inputHeight, maxHeight: 140)
                         .frame(height: max(28, inputHeight))
-                        .background(Color.clear)
-                        .cornerRadius(10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color(nsColor: .textBackgroundColor))
+                        )
                         .focused($focused)
                     if vm.input.isEmpty {
                         Text("Напишите сообщение…")
                             .foregroundStyle(.secondary)
                             .padding(.leading, 8)
                             .padding(.top, 8)
+                            .allowsHitTesting(false)
                     }
                 }
                 Button(action: vm.send) {
