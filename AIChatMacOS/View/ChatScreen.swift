@@ -51,6 +51,7 @@ struct ChatScreen: View {
                             RoundedRectangle(cornerRadius: 10)
                                 .fill(Color(nsColor: .textBackgroundColor))
                         )
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
                         .focused($focused)
                     if vm.input.isEmpty {
                         Text("Напишите сообщение…")
