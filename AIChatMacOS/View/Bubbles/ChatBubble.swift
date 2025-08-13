@@ -28,3 +28,7 @@ struct ChatBubble: View {
         .padding(.horizontal)
     }
 }
+
+#Preview {
+    ChatBubble(message: .init(role: .assistant, content: "Agent 1 finished") )
+}
