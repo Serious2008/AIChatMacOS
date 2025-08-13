@@ -11,7 +11,18 @@ import Foundation
 @MainActor
 final class ChatViewModel: ObservableObject {
     @Published var messages: [ChatMessage] = [
-        .init(role: .system, content: "You are a helpful assistant.")
+        .init(role: .system, content: """
+                            Ты эксперт в составлении ТЗ для разработки приложений!
+                            Проведи короткий опрос пользователя состоящий из 3 вопросов.
+                            
+                            - Какое приложение вы хотите сделать (утилита, транспорт, фитнес)
+                            - Для какой платформы
+                            - Основные функции
+
+                            Вопросы задавай по одному, без рассуждений!
+
+                            После сразу напиши короткое ТЗ для этого приложения!
+""")
     ]
     @Published var input: String = ""
     @Published var isSending = false
