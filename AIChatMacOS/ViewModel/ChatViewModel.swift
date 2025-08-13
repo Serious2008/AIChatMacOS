@@ -10,20 +10,7 @@ import Foundation
 // MARK: - ViewModel
 @MainActor
 final class ChatViewModel: ObservableObject {
-    @Published var messages: [ChatMessage] = [
-        .init(role: .system, content: """
-                            Ты эксперт в составлении ТЗ для разработки приложений!
-                            Проведи короткий опрос пользователя состоящий из 3 вопросов.
-                            
-                            - Какое приложение вы хотите сделать (утилита, транспорт, фитнес)
-                            - Для какой платформы
-                            - Основные функции
-
-                            Вопросы задавай по одному, без рассуждений!
-
-                            После сразу напиши короткое ТЗ для этого приложения!
-""")
-    ]
+    @Published var messages = [ChatMessage]()
     @Published var input: String = ""
     @Published var isSending = false
     @Published var errorMessage: String?
@@ -32,6 +19,7 @@ final class ChatViewModel: ObservableObject {
 
     init(service: LLMService = OpenAIService()) {
         self.service = service
+        self.messages.append(.init(role: .system, content: FirstAgent.systemMessage))
     }
 
     func send() {
@@ -45,11 +33,44 @@ final class ChatViewModel: ObservableObject {
         Task {
             do {
                 let reply = try await service.send(messages: messages)
-                messages.append(.init(role: .assistant, content: reply))
+                messages.append(contentsOf: prepareServiceMessage(message: reply))
+                
+                if containsFirstAgentFinishedTag(reply) {
+                    var messagesForSecondAgent = [ChatMessage]()
+                    messagesForSecondAgent.append(.init(role: .system, content: SecondAgent.systemMessage))
+                    messagesForSecondAgent.append(.init(role: .user, content: messages[messages.count - 2].content))
+                    
+                    let reply = try await service.send(messages: messagesForSecondAgent)
+                    messages.append(contentsOf: prepareServiceMessage(message: reply))
+                }
+                
             } catch {
                 errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             }
             isSending = false
         }
+    }
+    
+    private func prepareServiceMessage(message: String) -> [ChatMessage] {
+        
+        var messages = [ChatMessage]()
+        
+        if containsFirstAgentFinishedTag(message) {
+            let messageWithoutTag = message.replacingOccurrences(of: FirstAgent.finishedTag, with: "")
+            messages.append(.init(role: .assistant, content: messageWithoutTag))
+            messages.append(.init(role: .service, content: "Agent 1 Завершил работу"))
+        } else if message.contains(SecondAgent.finishedTag) {
+            let messageWithoutTag = message.replacingOccurrences(of: SecondAgent.finishedTag, with: "")
+            messages.append(.init(role: .assistant, content: messageWithoutTag))
+            messages.append(.init(role: .service, content: "Agent 2 Завершил работу"))
+        } else {
+            messages.append(.init(role: .assistant, content: message))
+        }
+        
+        return messages
+    }
+    
+    private func containsFirstAgentFinishedTag(_ message: String) -> Bool {
+        return message.contains(FirstAgent.finishedTag)
     }
 }

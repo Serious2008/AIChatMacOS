@@ -12,6 +12,7 @@ struct ChatScreen: View {
     @FocusState private var focused: Bool
     @State private var showingSettings = false
     @State private var inputHeight: CGFloat = 0
+    @State private var isServiceMessage: CGFloat = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -31,7 +32,13 @@ struct ChatScreen: View {
                 ScrollView {
                     LazyVStack(spacing: 8) {
                         ForEach(vm.messages) { msg in
-                            if msg.role != .system { ChatBubble(message: msg) }
+                            if msg.role != .system {
+                                if msg.role == .service {
+                                    SystemBubble(message: msg)
+                                } else {
+                                    ChatBubble(message: msg)
+                                }
+                            }
                         }
                     }
                     .padding(.vertical)
@@ -80,6 +87,6 @@ struct ChatScreen: View {
     }
 }
 
-#Preview {
-    ChatScreen()
-}
+//#Preview {
+//    ChatScreen()
+//}

@@ -11,18 +11,18 @@ import SwiftUI
 struct SystemBubble: View {
     let message: ChatMessage
 
-    var isAssistant: Bool { message.role == .assistant }
+    var isService: Bool { message.role == .service }
 
     var body: some View {
         HStack {
-            if isAssistant { Spacer(minLength: 40) }
+//            if isAssistant { Spacer(minLength: 40) }
             Text(message.content)
                 .textSelection(.enabled)
                 .padding(7)
                 .background(Color.yellow.opacity(0.15))
                 .cornerRadius(12)
                 .frame(maxWidth: 520, alignment: .leading)
-            if !isAssistant { Spacer(minLength: 40) }
+//            if !isAssistant { Spacer(minLength: 40) }
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.horizontal)
@@ -30,5 +30,5 @@ struct SystemBubble: View {
 }
 
 #Preview {
-    SystemBubble(message: .init(role: .assistant, content: "Agent 1 finished") )
+    SystemBubble(message: .init(role: .service, content: "Agent 1 finished") )
 }

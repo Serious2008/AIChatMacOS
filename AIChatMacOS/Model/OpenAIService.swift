@@ -32,7 +32,7 @@ final class OpenAIService: LLMService {
     private let apiKeyProvider: () -> String?
     private let model: String
 
-    init(model: String = "gpt-4o-mini", apiKeyProvider: @escaping () -> String? = { KeychainHelper.shared.apiKey }) {
+    init(model: String = "gpt-4o", apiKeyProvider: @escaping () -> String? = { KeychainHelper.shared.apiKey }) {
         self.model = model
         self.apiKeyProvider = apiKeyProvider
     }

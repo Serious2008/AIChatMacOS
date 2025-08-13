@@ -8,7 +8,9 @@
 import Foundation
 
 struct ChatMessage: Identifiable, Equatable, Codable {
-    enum Role: String, Codable { case system, user, assistant }
+    enum Role: String, Codable {
+        case system, user, assistant, service
+    }
     var id = UUID()
     let role: Role
     var content: String
